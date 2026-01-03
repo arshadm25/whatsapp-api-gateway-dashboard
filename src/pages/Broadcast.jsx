@@ -178,8 +178,32 @@ export default function Broadcast() {
                                     <span className="font-semibold text-slate-900">{tmplObj?.name}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-slate-500">Cost Estimate</span>
-                                    <span className="font-semibold text-slate-900">~ $ {(contacts.length * 0.05).toFixed(2)}</span>
+                                    <span className="text-slate-500">Category</span>
+                                    <span className={`font-semibold px-2 py-0.5 rounded text-xs ${tmplObj?.category === 'MARKETING' ? 'bg-purple-100 text-purple-700' :
+                                            tmplObj?.category === 'UTILITY' ? 'bg-blue-100 text-blue-700' :
+                                                tmplObj?.category === 'AUTHENTICATION' ? 'bg-orange-100 text-orange-700' :
+                                                    'bg-slate-100 text-slate-700'
+                                        }`}>{tmplObj?.category || 'N/A'}</span>
+                                </div>
+                                <div className="border-t border-slate-200 pt-3 mt-3">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-500">Rate per message (India)</span>
+                                        <span className="font-semibold text-slate-700">
+                                            ₹{tmplObj?.category === 'MARKETING' ? '0.88' :
+                                                tmplObj?.category === 'UTILITY' ? '0.12' :
+                                                    tmplObj?.category === 'AUTHENTICATION' ? '0.12' : '0.88'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-base mt-2">
+                                        <span className="font-medium text-slate-700">Total Cost Estimate</span>
+                                        <span className="font-bold text-emerald-600 text-lg">
+                                            ₹{(contacts.length * (
+                                                tmplObj?.category === 'MARKETING' ? 0.88 :
+                                                    tmplObj?.category === 'UTILITY' ? 0.12 :
+                                                        tmplObj?.category === 'AUTHENTICATION' ? 0.12 : 0.88
+                                            )).toFixed(2)}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
