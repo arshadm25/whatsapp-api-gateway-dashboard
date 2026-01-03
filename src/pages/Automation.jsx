@@ -7,6 +7,7 @@ export default function Automation() {
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [editingRule, setEditingRule] = useState(null);
 
     const API_URL = 'http://localhost:8080/api';
 
@@ -156,8 +157,8 @@ export default function Automation() {
                                         <div className="flex items-center gap-3 mb-2">
                                             <h4 className="text-lg font-semibold text-slate-800">{rule.name}</h4>
                                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${rule.type === 'auto_reply' ? 'bg-blue-50 text-blue-700' :
-                                                    rule.type === 'keyword_trigger' ? 'bg-purple-50 text-purple-700' :
-                                                        'bg-orange-50 text-orange-700'
+                                                rule.type === 'keyword_trigger' ? 'bg-purple-50 text-purple-700' :
+                                                    'bg-orange-50 text-orange-700'
                                                 }`}>
                                                 {rule.type.replace('_', ' ')}
                                             </span>
@@ -180,14 +181,17 @@ export default function Automation() {
                                         <button
                                             onClick={() => toggleRule(rule.id, rule.enabled)}
                                             className={`p-2 rounded-lg transition ${rule.enabled
-                                                    ? 'text-emerald-600 hover:bg-emerald-50'
-                                                    : 'text-slate-400 hover:bg-slate-100'
+                                                ? 'text-emerald-600 hover:bg-emerald-50'
+                                                : 'text-slate-400 hover:bg-slate-100'
                                                 }`}
                                             title={rule.enabled ? "Disable" : "Enable"}
                                         >
                                             {rule.enabled ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
                                         </button>
-                                        <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
+                                        <button
+                                            onClick={() => setEditingRule(rule)}
+                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                        >
                                             <Edit2 className="w-4 h-4" />
                                         </button>
                                         <button
@@ -204,11 +208,20 @@ export default function Automation() {
                 </div>
             </div>
 
-            {/* Create Modal - Simple version for now */}
+            {/* Create Modal */}
             {showCreateModal && (
                 <CreateRuleModal
                     onClose={() => setShowCreateModal(false)}
                     onSuccess={() => { setShowCreateModal(false); fetchData(); }}
+                />
+            )}
+
+            {/* Edit Modal */}
+            {editingRule && (
+                <EditRuleModal
+                    rule={editingRule}
+                    onClose={() => setEditingRule(null)}
+                    onSuccess={() => { setEditingRule(null); fetchData(); }}
                 />
             )}
         </div>
@@ -246,8 +259,8 @@ function CreateRuleModal({ onClose, onSuccess }) {
                 name: formData.name,
                 type: formData.type,
                 priority: formData.priority,
-                conditions: JSON.stringify(conditions),
-                actions: JSON.stringify(actions)
+                conditions: conditions,
+                actions: actions
             });
             onSuccess();
         } catch (error) {
@@ -319,6 +332,141 @@ function CreateRuleModal({ onClose, onSuccess }) {
                             className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
                         >
                             Create Rule
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// Edit Rule Modal
+function EditRuleModal({ rule, onClose, onSuccess }) {
+    // Parse existing conditions and actions
+    const parseConditions = () => {
+        try {
+            const conditions = typeof rule.conditions === 'string'
+                ? JSON.parse(rule.conditions)
+                : rule.conditions;
+            return conditions[0]?.value || '';
+        } catch {
+            return '';
+        }
+    };
+
+    const parseActions = () => {
+        try {
+            const actions = typeof rule.actions === 'string'
+                ? JSON.parse(rule.actions)
+                : rule.actions;
+            return actions[0]?.params?.message || '';
+        } catch {
+            return '';
+        }
+    };
+
+    const [formData, setFormData] = useState({
+        name: rule.name || '',
+        type: rule.type || 'auto_reply',
+        priority: rule.priority || 0,
+        keyword: parseConditions(),
+        message: parseActions()
+    });
+
+    const API_URL = 'http://localhost:8080/api';
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const conditions = [{
+            type: "keyword",
+            operator: "contains",
+            value: formData.keyword
+        }];
+
+        const actions = [{
+            type: "send_message",
+            params: { message: formData.message }
+        }];
+
+        try {
+            await axios.put(`${API_URL}/automation/rules/${rule.id}`, {
+                name: formData.name,
+                type: formData.type,
+                priority: formData.priority,
+                conditions: conditions,
+                actions: actions
+            });
+            onSuccess();
+        } catch (error) {
+            alert("Failed to update rule");
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+                <h3 className="text-xl font-bold text-slate-800 mb-4">Edit Automation Rule</h3>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Rule Name</label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            placeholder="e.g., Welcome Message"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Trigger Keyword</label>
+                        <input
+                            type="text"
+                            value={formData.keyword}
+                            onChange={(e) => setFormData({ ...formData, keyword: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            placeholder="e.g., hello, hi, help"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Reply Message</label>
+                        <textarea
+                            value={formData.message}
+                            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 h-24"
+                            placeholder="e.g., Hello! How can I help you today?"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Priority (higher = first)</label>
+                        <input
+                            type="number"
+                            value={formData.priority}
+                            onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+                        >
+                            Save Changes
                         </button>
                     </div>
                 </form>
