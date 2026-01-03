@@ -155,6 +155,30 @@ export default function Inbox() {
             );
         }
 
+        if (content.startsWith('[flow_response]:')) {
+            const jsonStr = content.substring('[flow_response]:'.length);
+            try {
+                const data = JSON.parse(jsonStr);
+                return (
+                    <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 text-xs">
+                        <div className="font-semibold text-slate-500 mb-2 border-b border-slate-200 pb-1 flex items-center gap-1">
+                            <Layers className="w-3 h-3" /> Flow Response
+                        </div>
+                        <div className="space-y-1">
+                            {Object.entries(data).map(([key, value]) => (
+                                <div key={key} className="flex flex-col sm:flex-row sm:justify-between sm:gap-4">
+                                    <span className="font-medium text-slate-600 capitalize">{key.replace(/_/g, ' ')}:</span>
+                                    <span className="text-slate-800 font-mono bg-white px-1.5 rounded border border-slate-100">{String(value)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            } catch (e) {
+                return <p className="text-xs font-mono text-slate-500 break-all">{jsonStr}</p>;
+            }
+        }
+
         return <p>{content}</p>;
     };
 
