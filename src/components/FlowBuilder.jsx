@@ -74,8 +74,8 @@ const ScreenNode = ({ data, isConnectable }) => {
 export default function FlowBuilder({ initialData, onSave, onCancel }) {
     const nodeTypes = useMemo(() => ({ screenNode: ScreenNode }), []);
 
-    const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
-    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes || INITIAL_NODES);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges || []);
     const [selectedNode, setSelectedNode] = useState(null);
 
     const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
@@ -217,11 +217,14 @@ export default function FlowBuilder({ initialData, onSave, onCancel }) {
 
     const handleSave = () => {
         const json = generateJSON();
-        onSave(json);
+        onSave({
+            flowJSON: json,
+            graphData: { nodes, edges }
+        });
     };
 
     return (
-        <div className="h-[calc(100vh-100px)] flex border border-slate-200 rounded-xl overflow-hidden shadow-2xl bg-slate-50">
+        <div className="h-full flex border border-slate-200 rounded-xl overflow-hidden shadow-2xl bg-slate-50">
 
             {/* Sidebar / Properties Panel */}
             <div className="w-80 bg-white border-r border-slate-200 flex flex-col">
@@ -292,10 +295,10 @@ export default function FlowBuilder({ initialData, onSave, onCancel }) {
                     )}
                 </div>
 
-                <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
-                    <button onClick={onCancel} className="flex-1 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-medium">Cancel</button>
-                    <button onClick={handleSave} className="flex-1 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-sm font-medium shadow-lg shadow-emerald-200 flex items-center justify-center gap-2">
-                        <Play className="w-4 h-4" /> Generate
+                <div className="p-6 border-t border-slate-200 bg-slate-50 flex gap-2">
+                    <button onClick={onCancel} className="flex-1 py-3 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-medium transition">Cancel</button>
+                    <button onClick={handleSave} className="flex-1 py-3 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-sm font-medium shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 transition">
+                        <Save className="w-5 h-5" /> Save Flow
                     </button>
                 </div>
             </div>

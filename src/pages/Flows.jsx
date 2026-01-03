@@ -12,6 +12,7 @@ export default function Flows() {
     const [newFlowName, setNewFlowName] = useState('');
     const [newFlowCategory, setNewFlowCategory] = useState(["OTHER"]);
     const [editingFlowId, setEditingFlowId] = useState(null);
+    const [editingFlowData, setEditingFlowData] = useState(null);
 
     const API_URL = 'http://localhost:8080/api/whatsapp';
 
@@ -79,16 +80,18 @@ export default function Flows() {
         }
     };
 
-    const handleBuilderSave = async (flowJson) => {
+    const handleBuilderSave = async ({ flowJSON, graphData }) => {
         if (!editingFlowId) return;
-        const blob = new Blob([JSON.stringify(flowJson, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(flowJSON, null, 2)], { type: 'application/json' });
         const formData = new FormData();
         formData.append('file', blob, 'flow.json');
+        formData.append('graph_data', JSON.stringify(graphData));
 
         try {
             await axios.post(`${API_URL}/flows/${editingFlowId}/assets`, formData);
             alert('Flow updated successfully.');
             setEditingFlowId(null);
+            setEditingFlowData(null);
         } catch (error) {
             alert('Update failed: ' + error.message);
         }
@@ -96,15 +99,19 @@ export default function Flows() {
 
     if (editingFlowId) {
         return (
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden h-[calc(100vh-140px)]">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden h-[calc(100vh-180px)]">
                 <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
                     <h2 className="font-bold text-slate-800 flex items-center gap-2"><Layers className="w-5 h-5" /> Visual Flow Builder</h2>
                     <div className="text-xs text-slate-500 font-mono">ID: {editingFlowId}</div>
                 </div>
                 <div className="p-4 h-full bg-slate-100">
                     <FlowBuilder
+                        initialData={editingFlowData}
                         onSave={handleBuilderSave}
-                        onCancel={() => setEditingFlowId(null)}
+                        onCancel={() => {
+                            setEditingFlowId(null);
+                            setEditingFlowData(null);
+                        }}
                     />
                 </div>
             </div>
@@ -156,7 +163,20 @@ export default function Flows() {
                             {/* Actions */}
                             <div className="flex items-center justify-between gap-2">
                                 <button
-                                    onClick={() => setEditingFlowId(flow.id)}
+                                    onClick={async () => {
+                                        try {
+                                            const res = await axios.get(`${API_URL}/flows/${flow.id}`);
+                                            if (res.data.graph_data) {
+                                                setEditingFlowData(res.data.graph_data);
+                                            } else {
+                                                setEditingFlowData(null);
+                                            }
+                                            setEditingFlowId(flow.id);
+                                        } catch (e) {
+                                            console.error("Failed to fetch flow details", e);
+                                            alert("Failed to load flow data");
+                                        }
+                                    }}
                                     className="text-xs font-medium text-purple-600 flex items-center gap-1 hover:underline"
                                 >
                                     <Edit3 className="w-3 h-3" /> Edit
