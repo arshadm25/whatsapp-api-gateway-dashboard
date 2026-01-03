@@ -92,6 +92,72 @@ export default function Inbox() {
         .filter(m => m.sender === selectedContactId)
         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); // Ascending for chat view
 
+    // Helper to render different message types
+    const renderMessageContent = (content) => {
+        if (!content) return null;
+
+        if (content.startsWith('[image]:')) {
+            const parts = content.split(':');
+            const mediaId = parts[1];
+            const caption = parts.slice(2).join(':');
+            return (
+                <div className="space-y-1">
+                    <img
+                        src={`${API_URL}/whatsapp/media/${mediaId}/proxy`}
+                        alt="Shared Image"
+                        className="rounded-lg max-h-60 object-cover cursor-pointer hover:opacity-95 transition"
+                        onClick={() => window.open(`${API_URL}/whatsapp/media/${mediaId}/proxy`, '_blank')}
+                    />
+                    {caption && <p>{caption}</p>}
+                </div>
+            );
+        }
+
+        if (content.startsWith('[video]:')) {
+            const parts = content.split(':');
+            const mediaId = parts[1];
+            const caption = parts.slice(2).join(':');
+            return (
+                <div className="space-y-1">
+                    <video
+                        controls
+                        src={`${API_URL}/whatsapp/media/${mediaId}/proxy`}
+                        className="rounded-lg max-h-60 w-full bg-black/5"
+                    />
+                    {caption && <p>{caption}</p>}
+                </div>
+            );
+        }
+
+        if (content.startsWith('[audio]:')) {
+            const mediaId = content.split(':')[1];
+            return (
+                <audio controls src={`${API_URL}/whatsapp/media/${mediaId}/proxy`} className="w-full min-w-[200px]" />
+            );
+        }
+
+        if (content.startsWith('[document]:')) {
+            const parts = content.split(':');
+            const mediaId = parts[1];
+            const filename = parts.slice(2).join(':') || 'Document';
+            return (
+                <a
+                    href={`${API_URL}/whatsapp/media/${mediaId}/proxy`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition group"
+                >
+                    <div className="p-2 bg-white rounded-md shadow-sm group-hover:scale-105 transition">
+                        <Paperclip className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <span className="text-sm font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 truncate max-w-[200px]">{filename}</span>
+                </a>
+            );
+        }
+
+        return <p>{content}</p>;
+    };
+
     return (
         <div className="flex bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 h-[calc(100vh-140px)]">
             {/* Sidebar List */}
@@ -182,7 +248,7 @@ export default function Inbox() {
                                         ? 'bg-emerald-100 text-slate-800 rounded-tr-none'
                                         : 'bg-white text-slate-800 rounded-tl-none'
                                         }`}>
-                                        <p>{msg.content}</p>
+                                        {renderMessageContent(msg.content)}
                                         <div className="flex items-center justify-end gap-1 mt-1 opacity-70">
                                             <span className="text-[10px] text-slate-500">
                                                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -197,7 +263,65 @@ export default function Inbox() {
                         {/* Input Area */}
                         <div className="p-4 bg-white border-t border-slate-100 z-10">
                             <form onSubmit={handleSend} className="flex items-center gap-3">
-                                <button type="button" className="p-2 text-slate-400 hover:text-slate-600 transition">
+                                <input
+                                    type="file"
+                                    id="chat-attachment"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files[0];
+                                        if (!file) return;
+
+                                        setSending(true);
+                                        const formData = new FormData();
+                                        formData.append('file', file);
+
+                                        try {
+                                            // 1. Upload Media
+                                            const uploadRes = await axios.post(`${API_URL}/whatsapp/media`, formData, {
+                                                headers: { 'Content-Type': 'multipart/form-data' }
+                                            });
+                                            const mediaId = uploadRes.data.id;
+
+                                            // 2. Determine type based on MIME
+                                            const mimeType = file.type;
+                                            let msgType = 'document';
+                                            let mediaPayload = { id: mediaId, filename: file.name };
+
+                                            if (mimeType.startsWith('image/')) {
+                                                msgType = 'image';
+                                                mediaPayload = { id: mediaId, caption: newMessage };
+                                            } else if (mimeType.startsWith('video/')) {
+                                                msgType = 'video';
+                                                mediaPayload = { id: mediaId, caption: newMessage };
+                                            } else if (mimeType.startsWith('audio/')) {
+                                                msgType = 'audio';
+                                                mediaPayload = { id: mediaId };
+                                            }
+
+                                            // 3. Send Message
+                                            await axios.post(`${API_URL}/whatsapp/send`, {
+                                                messaging_product: "whatsapp",
+                                                to: selectedContactId,
+                                                type: msgType,
+                                                [msgType]: mediaPayload
+                                            });
+
+                                            setNewMessage('');
+                                            await refreshData();
+                                        } catch (error) {
+                                            alert("Failed to send attachment: " + error.message);
+                                        } finally {
+                                            setSending(false);
+                                            e.target.value = ''; // Reset input
+                                        }
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => document.getElementById('chat-attachment').click()}
+                                    className="p-2 text-slate-400 hover:text-slate-600 transition"
+                                    disabled={sending}
+                                >
                                     <Paperclip className="w-5 h-5" />
                                 </button>
                                 <input
