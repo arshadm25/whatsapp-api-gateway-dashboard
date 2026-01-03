@@ -8,6 +8,7 @@ import Automation from './pages/Automation';
 import Media from './pages/Media';
 import Flows from './pages/Flows';
 import FlowPlayground from './pages/FlowPlayground';
+import Templates from './pages/Templates';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route index element={<Inbox />} />
           <Route path="contacts" element={<Contacts />} />
           <Route path="broadcast" element={<Broadcast />} />
+          <Route path="templates" element={<Templates />} />
           <Route path="automation" element={<Automation />} />
           <Route path="media" element={<Media />} />
           <Route path="flows" element={<Flows />} />
