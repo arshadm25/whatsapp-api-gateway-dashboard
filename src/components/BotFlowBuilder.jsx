@@ -327,6 +327,102 @@ const QuickReplyEditor = ({ step, onChange, showStaticVariables, flowVariables =
     );
 };
 
+const ListEditor = ({ step, onChange, showStaticVariables, flowVariables = [] }) => {
+    const addOption = () => {
+        const currentOptions = step.options || [];
+        if (currentOptions.length >= 10) return; // WhatsApp limit for lists
+        onChange('options', [...currentOptions, { title: 'New Option', description: '' }]);
+    };
+
+    const removeOption = (idx) => {
+        const currentOptions = step.options || [];
+        onChange('options', currentOptions.filter((_, i) => i !== idx));
+    };
+
+    const updateOption = (idx, field, val) => {
+        const currentOptions = [...(step.options || [])];
+        currentOptions[idx] = { ...currentOptions[idx], [field]: val };
+        onChange('options', currentOptions);
+    };
+
+    return (
+        <div className="space-y-3">
+            <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Message Text</label>
+                <TextEditor
+                    value={step.content}
+                    onChange={(val) => onChange('content', val)}
+                    showStaticVariables={showStaticVariables}
+                    flowVariables={flowVariables}
+                />
+            </div>
+
+            <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Button Text</label>
+                <input
+                    type="text"
+                    value={step.buttonText || 'Select an option'}
+                    onChange={(e) => onChange('buttonText', e.target.value)}
+                    placeholder="Button text (e.g., 'View Options')"
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                    maxLength={20}
+                />
+            </div>
+
+            <div>
+                <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">List Options (Max 10)</label>
+                    <button
+                        onClick={addOption}
+                        disabled={step.options && step.options.length >= 10}
+                        className="text-xs px-2 py-1 bg-emerald-500 text-white rounded hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                    >
+                        <Plus className="w-3 h-3" /> Add Option
+                    </button>
+                </div>
+                <div className="space-y-2">
+                    {(step.options || []).map((opt, i) => (
+                        <div key={i} className="border border-slate-200 rounded p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                                <div className="bg-amber-100 text-amber-600 w-6 h-6 flex items-center justify-center rounded text-xs font-bold shrink-0">
+                                    {i + 1}
+                                </div>
+                                <input
+                                    type="text"
+                                    value={opt.title}
+                                    onChange={(e) => updateOption(i, 'title', e.target.value)}
+                                    placeholder="Option Title"
+                                    className="flex-1 px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                                    maxLength={24}
+                                />
+                                <button
+                                    onClick={() => removeOption(i)}
+                                    className="text-slate-400 hover:text-red-500 p-1"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                            <input
+                                type="text"
+                                value={opt.description || ''}
+                                onChange={(e) => updateOption(i, 'description', e.target.value)}
+                                placeholder="Description (optional)"
+                                className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-slate-300 text-slate-600"
+                                maxLength={72}
+                            />
+                        </div>
+                    ))}
+                    {(!step.options || step.options.length === 0) && (
+                        <div className="text-center text-xs text-slate-400 py-2 italic">
+                            No options added.
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Custom Node for Bot Flow
 const BotNode = ({ data, isConnectable, selected }) => {
     // Special rendering for Start Node
@@ -418,6 +514,32 @@ const BotNode = ({ data, isConnectable, selected }) => {
                                             </div>
                                         </div>
                                     )}
+                                    {step.type === 'List' && step.options && step.options.length > 0 && (
+                                        <div className="flex flex-col gap-2 mt-2">
+                                            {step.options.map((opt, i) => (
+                                                <div key={i} className="relative flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 group/opt">
+                                                    <span className="text-xs font-medium text-slate-700">{opt.title}</span>
+                                                    <Handle
+                                                        type="source"
+                                                        position={Position.Right}
+                                                        id={`handle-${idx}-${i}`}
+                                                        isConnectable={isConnectable}
+                                                        className="!w-3 !h-3 !bg-amber-500 !border-2 !border-white !-right-3 opacity-0 group-hover/opt:opacity-100 transition-opacity"
+                                                    />
+                                                </div>
+                                            ))}
+                                            <div className="relative flex items-center justify-between bg-white border border-slate-200 border-dashed rounded-lg px-3 py-2 mt-2">
+                                                <span className="text-xs font-medium text-slate-400 italic">Default</span>
+                                                <Handle
+                                                    type="source"
+                                                    position={Position.Right}
+                                                    id={`handle-${idx}-default`}
+                                                    isConnectable={isConnectable}
+                                                    className="!w-3 !h-3 !bg-slate-400 !border-2 !border-white !-right-3"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <GripVertical className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 cursor-grab" />
                             </div>
@@ -431,7 +553,7 @@ const BotNode = ({ data, isConnectable, selected }) => {
             </div>
 
             {/* Output Handle */}
-            {(!data.steps || !data.steps.some(step => step.type === 'Quick Reply')) && (
+            {(!data.steps || !data.steps.some(step => step.type === 'Quick Reply' || step.type === 'List')) && (
                 <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="w-4 h-4 bg-emerald-500 border-2 border-white !-right-2" />
             )}
         </div>
@@ -474,6 +596,19 @@ export default function BotFlowBuilder() {
             return node;
         }));
     }, [setNodes]);
+
+    // Load saved flows on mount for Chatbot step dropdown
+    React.useEffect(() => {
+        const loadFlowsList = async () => {
+            try {
+                const res = await axios.get('http://localhost:8080/api/whatsapp/flows/local');
+                setSavedFlows(res.data);
+            } catch (err) {
+                console.error('Failed to load flows list:', err);
+            }
+        };
+        loadFlowsList();
+    }, []);
 
     const onConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#94a3b8', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed } }, eds)), [setEdges]);
 
@@ -570,6 +705,7 @@ export default function BotFlowBuilder() {
     const [flowId, setFlowId] = useState(null);
     const [showLoadModal, setShowLoadModal] = useState(false);
     const [savedFlows, setSavedFlows] = useState([]);
+    const [targetFlowNodes, setTargetFlowNodes] = useState({}); // Store nodes by flow ID
 
     const saveFlow = async () => {
         try {
@@ -805,8 +941,114 @@ export default function BotFlowBuilder() {
                                             />
                                         )}
 
+                                        {step.type === 'List' && (
+                                            <ListEditor
+                                                step={step}
+                                                onChange={(field, val) => updateStep(selectedNode.id, idx, field, val)}
+                                                showStaticVariables={staticVarsEnabled}
+                                                flowVariables={nodes.flatMap(n => n.data.steps || [])
+                                                    .filter(s => s.variable)
+                                                    .map(s => ({ label: s.variable, value: `{{vars.${s.variable}}}` }))
+                                                }
+                                            />
+                                        )}
 
-                                        {!['Text', 'Text Message', 'Quick Reply'].includes(step.type) && (
+                                        {step.type === 'Chatbot' && (
+                                            <div className="space-y-3">
+                                                <div className="text-xs text-slate-500 italic">
+                                                    Jump to another flow or a specific node within a flow.
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Target Flow</label>
+                                                    <select
+                                                        value={step.targetFlowId || ''}
+                                                        onChange={async (e) => {
+                                                            const flowId = e.target.value;
+                                                            console.log('Selected flow ID:', flowId);
+                                                            console.log('Current step.targetFlowId before update:', step.targetFlowId);
+
+                                                            // Update step data immediately
+                                                            updateStep(selectedNode.id, idx, 'targetFlowId', flowId);
+                                                            updateStep(selectedNode.id, idx, 'targetNodeId', '');
+
+                                                            // Also update selectedNode directly for immediate UI update
+                                                            setSelectedNode(prev => {
+                                                                const newSteps = [...prev.data.steps];
+                                                                newSteps[idx] = {
+                                                                    ...newSteps[idx],
+                                                                    targetFlowId: flowId,
+                                                                    targetNodeId: ''
+                                                                };
+                                                                return { ...prev, data: { ...prev.data, steps: newSteps } };
+                                                            });
+
+                                                            // Load nodes from selected flow
+                                                            if (flowId) {
+                                                                try {
+                                                                    const res = await axios.get(`http://localhost:8080/api/whatsapp/flows/local/${flowId}`);
+                                                                    console.log('Flow data:', res.data);
+                                                                    const graphData = res.data.graph_data;
+                                                                    if (graphData) {
+                                                                        // Check if graphData is already an object or a string
+                                                                        const parsed = typeof graphData === 'string' ? JSON.parse(graphData) : graphData;
+                                                                        console.log('Parsed nodes:', parsed.nodes);
+                                                                        // Store nodes in state keyed by flow ID
+                                                                        setTargetFlowNodes(prev => ({
+                                                                            ...prev,
+                                                                            [flowId]: parsed.nodes || []
+                                                                        }));
+                                                                    }
+                                                                } catch (err) {
+                                                                    console.error('Failed to load flow nodes:', err);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                                                    >
+                                                        <option value="">Select a flow...</option>
+                                                        {savedFlows.map(flow => (
+                                                            <option key={flow.id} value={flow.id}>{flow.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {step.targetFlowId && (
+                                                    <div>
+                                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Target Group/Node</label>
+                                                        <select
+                                                            value={step.targetNodeId || ''}
+                                                            onChange={(e) => {
+                                                                console.log('Selected node:', e.target.value);
+                                                                updateStep(selectedNode.id, idx, 'targetNodeId', e.target.value);
+                                                            }}
+                                                            className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                                                        >
+                                                            <option value="">Start from beginning</option>
+                                                            {(() => {
+                                                                const nodes = targetFlowNodes[step.targetFlowId] || [];
+                                                                console.log('Rendering dropdown for flowId:', step.targetFlowId);
+                                                                console.log('Available nodes:', nodes);
+                                                                console.log('All targetFlowNodes:', targetFlowNodes);
+                                                                return nodes.map(node => (
+                                                                    <option key={node.id} value={node.id}>
+                                                                        {node.data?.label || node.id}
+                                                                    </option>
+                                                                ));
+                                                            })()}
+                                                        </select>
+                                                        <p className="text-xs text-slate-400 mt-1">
+                                                            {(targetFlowNodes[step.targetFlowId] || []).length > 0
+                                                                ? `${(targetFlowNodes[step.targetFlowId] || []).length} groups available`
+                                                                : 'Loading groups...'}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+
+                                        {!['Text', 'Text Message', 'Quick Reply', 'List', 'Chatbot'].includes(step.type) && (
                                             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
                                                 <div className="text-xs text-slate-500 italic">
                                                     This step waits for the user to send a <strong>{step.type}</strong>.
@@ -824,6 +1066,76 @@ export default function BotFlowBuilder() {
                                                             className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500 font-mono text-emerald-600"
                                                         />
                                                     </div>
+                                                </div>
+
+                                                {/* Validation Settings */}
+                                                <div className="border-t border-slate-200 pt-3 space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Validation Settings</label>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-xs text-slate-500 block mb-1">Max Retries</label>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                max="10"
+                                                                value={step.validation?.maxRetries || 3}
+                                                                onChange={(e) => updateStep(selectedNode.id, idx, 'validation', { ...step.validation, maxRetries: e.target.value })}
+                                                                className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                                                            />
+                                                        </div>
+                                                        {step.type === 'Number Input' && (
+                                                            <>
+                                                                <div>
+                                                                    <label className="text-xs text-slate-500 block mb-1">Min Value</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={step.validation?.min || ''}
+                                                                        onChange={(e) => updateStep(selectedNode.id, idx, 'validation', { ...step.validation, min: e.target.value })}
+                                                                        placeholder="Optional"
+                                                                        className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-xs text-slate-500 block mb-1">Max Value</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={step.validation?.max || ''}
+                                                                        onChange={(e) => updateStep(selectedNode.id, idx, 'validation', { ...step.validation, max: e.target.value })}
+                                                                        placeholder="Optional"
+                                                                        className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                                                                    />
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="text-xs text-slate-500 block mb-1">Error Message</label>
+                                                        <input
+                                                            type="text"
+                                                            value={step.validation?.errorMessage || ''}
+                                                            onChange={(e) => updateStep(selectedNode.id, idx, 'validation', { ...step.validation, errorMessage: e.target.value })}
+                                                            placeholder="Invalid input. Please try again."
+                                                            className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                                                        />
+                                                    </div>
+
+                                                    {step.type === 'Text Input' && (
+                                                        <div>
+                                                            <label className="text-xs text-slate-500 block mb-1">Regex Pattern (Optional)</label>
+                                                            <input
+                                                                type="text"
+                                                                value={step.validation?.regex || ''}
+                                                                onChange={(e) => updateStep(selectedNode.id, idx, 'validation', { ...step.validation, regex: e.target.value })}
+                                                                placeholder="e.g. ^[A-Za-z]+$"
+                                                                className="w-full px-3 py-1.5 border border-slate-200 rounded text-sm focus:outline-none focus:border-slate-300 font-mono"
+                                                            />
+                                                            <p className="text-xs text-slate-400 mt-1">Use regex to validate text format</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
