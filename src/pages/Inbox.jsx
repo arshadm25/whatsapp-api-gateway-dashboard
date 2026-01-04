@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Send, RefreshCw, Search, Phone, MoreVertical, Paperclip, Check, CheckCheck } from 'lucide-react';
+import { Send, RefreshCw, Search, Phone, MoreVertical, Paperclip, Check, CheckCheck, Layers } from 'lucide-react';
+import useWebSocket from '../hooks/useWebSocket';
 
 export default function Inbox() {
     const [messages, setMessages] = useState([]);
@@ -29,10 +30,20 @@ export default function Inbox() {
         }
     };
 
+    const handleWebSocketMessage = useCallback((event) => {
+        if (event.type === 'new_message') {
+            setMessages(prev => {
+                // Prevent duplicates
+                if (prev.find(m => m.id === event.data.id)) return prev;
+                return [event.data, ...prev];
+            });
+        }
+    }, []);
+
+    useWebSocket(handleWebSocketMessage);
+
     useEffect(() => {
         refreshData();
-        const interval = setInterval(refreshData, 5000); // Poll every 5s
-        return () => clearInterval(interval);
     }, []);
 
     // Derive conversations from messages - group by phone number (sender)

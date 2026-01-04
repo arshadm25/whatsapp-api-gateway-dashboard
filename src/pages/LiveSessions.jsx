@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
     Users,
@@ -13,6 +13,7 @@ import {
     Calendar
 } from 'lucide-react';
 import { format } from 'date-fns';
+import useWebSocket from '../hooks/useWebSocket';
 
 export default function LiveSessions() {
     const [sessions, setSessions] = useState([]);
@@ -47,6 +48,39 @@ export default function LiveSessions() {
         }
     };
 
+    const handleWebSocketMessage = useCallback((event) => {
+        if (event.type === 'new_message') {
+            const msg = event.data;
+            // If the message belongs to the current selected session, append it
+            if (selectedSession && (msg.wa_id === selectedSession.wa_id || msg.sender === selectedSession.wa_id)) {
+                // Check if it should be in this session timeframe
+                const msgTime = new Date(msg.created_at);
+                const sessionTime = new Date(selectedSession.started_at);
+                if (msgTime >= sessionTime) {
+                    setMessages(prev => {
+                        if (prev.find(m => m.id === msg.id)) return prev;
+                        return [...prev, msg];
+                    });
+                }
+            }
+        } else if (event.type === 'session_update') {
+            // Re-fetch sessions to get full joined data (names, etc) or just update manually
+            // Re-fetching is safer and simpler for now to ensure we have contact names
+            fetchSessions();
+
+            // If the updated session is the one we are looking at, update its metadata
+            if (selectedSession && selectedSession.wa_id === event.data.wa_id) {
+                setSelectedSession(prev => ({
+                    ...prev,
+                    current_node: event.data.current_node,
+                    updated_at: event.data.updated_at
+                }));
+            }
+        }
+    }, [selectedSession]);
+
+    useWebSocket(handleWebSocketMessage);
+
     const terminateSession = async (id) => {
         if (!confirm('Are you sure you want to forcefully terminate this session?')) return;
         try {
@@ -62,17 +96,13 @@ export default function LiveSessions() {
 
     useEffect(() => {
         fetchSessions();
-        const interval = setInterval(fetchSessions, 5000); // Poll sessions every 5s
-        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
         if (selectedSession) {
             fetchMessages(selectedSession);
-            const interval = setInterval(() => fetchMessages(selectedSession), 3000); // Poll messages more frequently
-            return () => clearInterval(interval);
         }
-    }, [selectedSession]);
+    }, [selectedSession?.wa_id, selectedSession?.started_at]);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -108,8 +138,8 @@ export default function LiveSessions() {
                                 key={session.id}
                                 onClick={() => setSelectedSession(session)}
                                 className={`w-full text-left p-4 rounded-xl border transition-all duration-200 group relative ${selectedSession?.id === session.id
-                                        ? 'bg-emerald-50 border-emerald-200 shadow-sm'
-                                        : 'bg-white border-slate-100 hover:border-emerald-200 hover:shadow-md'
+                                    ? 'bg-emerald-50 border-emerald-200 shadow-sm'
+                                    : 'bg-white border-slate-100 hover:border-emerald-200 hover:shadow-md'
                                     }`}
                             >
                                 <div className="flex justify-between items-start mb-2">
@@ -190,8 +220,8 @@ export default function LiveSessions() {
                                 return (
                                     <div key={msg.id} className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}>
                                         <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm relative group ${isOutgoing
-                                                ? 'bg-emerald-600 text-white rounded-tr-none'
-                                                : 'bg-white text-slate-800 rounded-tl-none'
+                                            ? 'bg-emerald-600 text-white rounded-tr-none'
+                                            : 'bg-white text-slate-800 rounded-tl-none'
                                             }`}>
                                             {/* Type Badge */}
                                             {msg.type !== 'text' && (
