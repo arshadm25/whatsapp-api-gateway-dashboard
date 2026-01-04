@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { MessageSquare, Users, Radio, Settings, LogOut, Bell, Zap, Image, Layers, Gamepad2, FileText, Bot } from 'lucide-react';
+import { MessageSquare, Users, Radio, Settings, LogOut, Bell, Zap, Image, Layers, Gamepad2, FileText, Bot, Activity } from 'lucide-react';
 
 export default function Layout() {
     const location = useLocation();
@@ -12,6 +12,7 @@ export default function Layout() {
             case '/broadcast': return 'Campaigns';
             case '/templates': return 'Templates';
             case '/automation': return 'Automation';
+            case '/automation/sessions': return 'Live Monitoring';
             case '/chatbot': return 'WhatsApp Chatbot';
             case '/media': return 'Media Library';
             case '/flows': return 'WhatsApp Flows';
@@ -76,6 +77,10 @@ export default function Layout() {
                     <NavLink to="/automation" className={navClass}>
                         <Zap className="w-5 h-5" />
                         Automation
+                    </NavLink>
+                    <NavLink to="/automation/sessions" className={navClass}>
+                        <Activity className="w-5 h-5" />
+                        Live Sessions
                     </NavLink>
                     <NavLink to="/chatbot" className={navClass}>
                         <Bot className="w-5 h-5" />

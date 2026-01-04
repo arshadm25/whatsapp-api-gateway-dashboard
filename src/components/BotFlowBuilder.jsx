@@ -423,6 +423,103 @@ const ListEditor = ({ step, onChange, showStaticVariables, flowVariables = [] })
     );
 };
 
+const MediaEditor = ({ step, onChange, showStaticVariables, flowVariables = [] }) => {
+    return (
+        <div className="space-y-3">
+            <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">WhatsApp Media ID</label>
+                <input
+                    type="text"
+                    value={step.mediaId || ''}
+                    onChange={(e) => onChange('mediaId', e.target.value)}
+                    placeholder="Enter Media ID..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500 font-mono"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Upload files in the Media tab to get their IDs.</p>
+            </div>
+
+            {['Image', 'Video', 'File'].includes(step.type) && (
+                <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Caption / Filename</label>
+                    <TextEditor
+                        value={step.content}
+                        onChange={(val) => onChange('content', val)}
+                        showStaticVariables={showStaticVariables}
+                        flowVariables={flowVariables}
+                    />
+                </div>
+            )}
+        </div>
+    );
+};
+
+const LocationEditor = ({ step, onChange, showStaticVariables, flowVariables = [] }) => {
+    return (
+        <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Latitude</label>
+                    <input
+                        type="text"
+                        value={step.latitude || ''}
+                        onChange={(e) => onChange('latitude', e.target.value)}
+                        placeholder="e.g. -33.8688"
+                        className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                    />
+                </div>
+                <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Longitude</label>
+                    <input
+                        type="text"
+                        value={step.longitude || ''}
+                        onChange={(e) => onChange('longitude', e.target.value)}
+                        placeholder="e.g. 151.2093"
+                        className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                    />
+                </div>
+            </div>
+            <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Location Name</label>
+                <input
+                    type="text"
+                    value={step.name || ''}
+                    onChange={(e) => onChange('name', e.target.value)}
+                    placeholder="e.g. Sydney Opera House"
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                />
+            </div>
+            <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Address</label>
+                <input
+                    type="text"
+                    value={step.address || ''}
+                    onChange={(e) => onChange('address', e.target.value)}
+                    placeholder="Enter full address..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                />
+            </div>
+        </div>
+    );
+};
+
+const YouTubeEditor = ({ step, onChange }) => {
+    return (
+        <div className="space-y-3">
+            <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">YouTube URL</label>
+                <input
+                    type="text"
+                    value={step.url || ''}
+                    onChange={(e) => onChange('url', e.target.value)}
+                    placeholder="https://youtube.com/watch?v=..."
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">WhatsApp will automatically show a video preview.</p>
+            </div>
+        </div>
+    );
+};
+
 // Custom Node for Bot Flow
 const BotNode = ({ data, isConnectable, selected }) => {
     // Special rendering for Start Node
@@ -969,6 +1066,37 @@ export default function BotFlowBuilder() {
                                             />
                                         )}
 
+                                        {['Image', 'Video', 'Audio', 'File'].includes(step.type) && (
+                                            <MediaEditor
+                                                step={step}
+                                                onChange={(field, val) => updateStep(selectedNode.id, idx, field, val)}
+                                                showStaticVariables={staticVarsEnabled}
+                                                flowVariables={nodes.flatMap(n => n.data.steps || [])
+                                                    .filter(s => s.variable)
+                                                    .map(s => ({ label: s.variable, value: `{{vars.${s.variable}}}` }))
+                                                }
+                                            />
+                                        )}
+
+                                        {step.type === 'Location' && (
+                                            <LocationEditor
+                                                step={step}
+                                                onChange={(field, val) => updateStep(selectedNode.id, idx, field, val)}
+                                                showStaticVariables={staticVarsEnabled}
+                                                flowVariables={nodes.flatMap(n => n.data.steps || [])
+                                                    .filter(s => s.variable)
+                                                    .map(s => ({ label: s.variable, value: `{{vars.${s.variable}}}` }))
+                                                }
+                                            />
+                                        )}
+
+                                        {step.type === 'YouTube' && (
+                                            <YouTubeEditor
+                                                step={step}
+                                                onChange={(field, val) => updateStep(selectedNode.id, idx, field, val)}
+                                            />
+                                        )}
+
                                         {step.type === 'Chatbot' && (
                                             <div className="space-y-3">
                                                 <div className="text-xs text-slate-500 italic">
@@ -1063,8 +1191,7 @@ export default function BotFlowBuilder() {
                                             </div>
                                         )}
 
-
-                                        {!['Text', 'Text Message', 'Quick Reply', 'List', 'Chatbot'].includes(step.type) && (
+                                        {step.type.includes('Input') && (
                                             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-3">
                                                 <div className="text-xs text-slate-500 italic">
                                                     This step waits for the user to send a <strong>{step.type}</strong>.
