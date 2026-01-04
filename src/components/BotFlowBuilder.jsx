@@ -774,6 +774,22 @@ export default function BotFlowBuilder() {
         }
     };
 
+    const deleteFlow = async (id, name) => {
+        if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await axios.delete(`http://localhost:8080/api/whatsapp/flows/local/${id}`);
+            // Refresh the flows list
+            const res = await axios.get('http://localhost:8080/api/whatsapp/flows/local');
+            setSavedFlows(res.data);
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete flow');
+        }
+    };
+
     const updateNodeData = (nodeId, newData) => {
         setNodes((nds) =>
             nds.map((node) => {
@@ -1232,17 +1248,31 @@ export default function BotFlowBuilder() {
                             ) : (
                                 <div className="space-y-1">
                                     {savedFlows.map((f) => (
-                                        <button
+                                        <div
                                             key={f.id}
-                                            onClick={() => loadFlow(f.id)}
-                                            className="w-full flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl text-left transition group border border-transparent hover:border-slate-100"
+                                            className="flex items-center gap-2 p-3 hover:bg-slate-50 rounded-xl transition group border border-transparent hover:border-slate-100"
                                         >
-                                            <div>
-                                                <div className="font-bold text-slate-700 text-sm group-hover:text-emerald-700">{f.name}</div>
-                                                <div className="text-[10px] text-slate-400 font-mono">Last updated: {new Date(f.updated_at).toLocaleDateString()}</div>
-                                            </div>
-                                            <ArrowLeft className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 rotate-180" />
-                                        </button>
+                                            <button
+                                                onClick={() => loadFlow(f.id)}
+                                                className="flex-1 flex items-center justify-between text-left"
+                                            >
+                                                <div>
+                                                    <div className="font-bold text-slate-700 text-sm group-hover:text-emerald-700">{f.name}</div>
+                                                    <div className="text-[10px] text-slate-400 font-mono">Last updated: {new Date(f.updated_at).toLocaleDateString()}</div>
+                                                </div>
+                                                <ArrowLeft className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 rotate-180" />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    deleteFlow(f.id, f.name);
+                                                }}
+                                                className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition opacity-0 group-hover:opacity-100"
+                                                title="Delete flow"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     ))}
                                 </div>
                             )}
