@@ -9,6 +9,7 @@ import Media from './pages/Media';
 import Flows from './pages/Flows';
 import FlowPlayground from './pages/FlowPlayground';
 import Templates from './pages/Templates';
+import Chatbot from './pages/Chatbot';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="broadcast" element={<Broadcast />} />
           <Route path="templates" element={<Templates />} />
           <Route path="automation" element={<Automation />} />
+          <Route path="chatbot" element={<Chatbot />} />
           <Route path="media" element={<Media />} />
           <Route path="flows" element={<Flows />} />
           <Route path="playground" element={<FlowPlayground />} />
