@@ -11,6 +11,7 @@ import FlowPlayground from './pages/FlowPlayground';
 import Templates from './pages/Templates';
 import Chatbot from './pages/Chatbot';
 import LiveSessions from './pages/LiveSessions';
+import SettingsPage from './pages/Settings';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="automation" element={<Automation />} />
           <Route path="automation/sessions" element={<LiveSessions />} />
           <Route path="chatbot" element={<Chatbot />} />
+          <Route path="settings" element={<SettingsPage />} />
           <Route path="media" element={<Media />} />
           <Route path="flows" element={<Flows />} />
           <Route path="playground" element={<FlowPlayground />} />
